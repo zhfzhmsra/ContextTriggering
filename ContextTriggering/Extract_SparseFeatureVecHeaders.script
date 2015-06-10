@@ -1,21 +1,20 @@
-﻿REFERENCE @"Newtonsoft.Json.dll";
+﻿//REFERENCE @"Newtonsoft.Json.dll";
 //Script GUID:f027eded-bbad-4000-a0a6-71401cc79fe2
 //Used for tracking history
 
 Input = 
     SSTREAM @@Input@@;
 
-FeatureHeaders =
-    REDUCE Input 
+FeatureHeadersTmp =
+    PROCESS Input 
     PRODUCE *
     USING FeatureHeaderReducer(@@SparseFeatVecColumns@@,
                                @@HeaderSuffix@@);
 
-//FeatureHeaders =
-//    REDUCE FeatureHeaders ALL
-//    PRODUCE *
-//    USING IntegrateAllRowsReducer(@@SparseFeatVecColumns@@,
-//                                  @@HeaderSuffix@@);
+FeatureHeaders =
+    REDUCE FeatureHeadersTmp ALL
+    USING IntegrateAllRowsReducer(@@SparseFeatVecColumns@@,
+                                  @@HeaderSuffix@@);
 
 OUTPUT FeatureHeaders 
 TO SSTREAM @@FeatureHeaders@@;
@@ -33,7 +32,7 @@ using System.Web;
 /// <summary>
 /// For each column of sparse feature group <k,v> pairs, output a corresponding column of the feature names.
 /// </summary>
-public class FeatureHeaderReducer : Reducer
+public class FeatureHeaderReducer : Processor
 {
     public const string SparseFeatVecColumnsKey = "sfv_cols";
     public const string HeaderSuffixKey = "header_suffix";
@@ -86,7 +85,7 @@ public class FeatureHeaderReducer : Reducer
     /// of one input sparse feature group column.</param>
     /// <param name="args">Arguments to specify sparse feature columns and the header suffix.</param>
     /// <returns></returns>
-    public override IEnumerable<Row> Reduce(RowSet input, Row output, string[] args)
+    public override IEnumerable<Row> Process(RowSet input, Row output, string[] args)
     {
         var argDict = GetArgs(args);
         if (argDict.ContainsKey(SparseFeatVecColumnsKey))
@@ -133,82 +132,82 @@ public class FeatureHeaderReducer : Reducer
     }
 }
 
-//
-//public class IntegrateAllRowsReducer : Reducer
-//{
-//    public const string SparseFeatVecColumnsKey = "sfv_cols";
-//    public const string HeaderSuffixKey = "header_suffix";
-//
-//    public Dictionary<string, string> GetArgs(string[] args)
-//    {
-//        var argDict = new Dictionary<string, string>();
-//        foreach (var arg in args)
-//        {
-//            string[] kv = arg.Split(':');
-//            if (kv.Length == 2)
-//            {
-//                argDict[kv[0]] = kv[1];
-//            }
-//        }
-//
-//        if (!argDict.ContainsKey(HeaderSuffixKey))
-//        {
-//            argDict[HeaderSuffixKey] = "Headers";
-//        }
-//        
-//        return argDict;
-//    }
-//    public override Schema Produces(string[] columns, string[] args, Schema input_schema)
-//    {
-//        return input_schema.Clone();
-//    }
-//
-//    public override IEnumerable<Row> Reduce(RowSet input, Row output, string[] args)
-//    {
-//        var argDict = GetArgs(args);
-//        if (argDict.ContainsKey(SparseFeatVecColumnsKey))
-//        {
-//            string[] sparseFeatVecColumns = argDict[SparseFeatVecColumnsKey]
-//                .Split(',').Select(dp => dp + argDict[HeaderSuffixKey]);
-//            var headers = new Dictionary<string, HashSet<string>>();
-//
-//            foreach (Row row in input.Rows)
-//            {
-//                foreach (var col in sparseFeatVecColumns)
-//                {
-//                    if (!headers.ContainsKey(col))
-//                    {
-//                        headers[col] = new HashSet<string>();
-//                    }
-//                    var names = row[col].String;
-//                    if (!string.IsNullOrEmpty(sparseFeatures))
-//                    {
-//                        foreach (var featName in names.Split(','))
-//                        {
-//                            if (!string.IsNullOrEmpty(featName) && !headers[col].Contains(featName))
-//                            {
-//                                headers[col].Add(featName);
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//
-//            foreach (var col in sparseFeatVecColumns)
-//            {
-//                var headerList = headers[col].ToList();
-//                headerList.Sort();
-//                var s = string.Join(",", headerList);
-//                if (string.IsNullOrEmpty(s))
-//                {
-//                    s = "N/A";
-//                }
-//                output[col].Set(s);
-//            }            
-//            yield return output; 
-//        }    
-//    }
-//}
+
+public class IntegrateAllRowsReducer : Reducer
+{
+    public const string SparseFeatVecColumnsKey = "sfv_cols";
+    public const string HeaderSuffixKey = "header_suffix";
+
+    public Dictionary<string, string> GetArgs(string[] args)
+    {
+        var argDict = new Dictionary<string, string>();
+        foreach (var arg in args)
+        {
+            string[] kv = arg.Split(':');
+            if (kv.Length == 2)
+            {
+                argDict[kv[0]] = kv[1];
+            }
+        }
+
+        if (!argDict.ContainsKey(HeaderSuffixKey))
+        {
+            argDict[HeaderSuffixKey] = "Headers";
+        }
+        
+        return argDict;
+    }
+    public override Schema Produces(string[] columns, string[] args, Schema input_schema)
+    {
+        return input_schema.Clone();
+    }
+
+    public override IEnumerable<Row> Reduce(RowSet input, Row output, string[] args)
+    {
+        var argDict = GetArgs(args);
+        if (argDict.ContainsKey(SparseFeatVecColumnsKey))
+        {
+            var sparseFeatVecColumns = argDict[SparseFeatVecColumnsKey]
+                .Split(',').Select(dp => dp + argDict[HeaderSuffixKey]);
+            var headers = new Dictionary<string, HashSet<string>>();
+
+            foreach (Row row in input.Rows)
+            {
+                foreach (var col in sparseFeatVecColumns)
+                {
+                    if (!headers.ContainsKey(col))
+                    {
+                        headers[col] = new HashSet<string>();
+                    }
+                    var names = row[col].String;
+                    if (!string.IsNullOrEmpty(names))
+                    {
+                        foreach (var featName in names.Split(','))
+                        {
+                            if (!string.IsNullOrEmpty(featName) && !headers[col].Contains(featName))
+                            {
+                                headers[col].Add(featName);
+                            }
+                        }
+                    }
+                }
+            }
+
+            foreach (var col in sparseFeatVecColumns)
+            {
+                var headerList = headers[col].ToList();
+                headerList.Sort();
+                var s = string.Join(",", headerList);
+                if (string.IsNullOrEmpty(s))
+                {
+                    s = "N/A";
+                }
+                output[col].Set(s);
+            }            
+            yield return output; 
+        }    
+    }
+}
 
 
 #ENDCS

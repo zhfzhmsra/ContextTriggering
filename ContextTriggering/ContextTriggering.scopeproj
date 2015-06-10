@@ -26,7 +26,19 @@
     <OutputPath>bin\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Script Include="evaluate.script" />
+    <Script Include="Extract_Features_ToStructStream.script" />
+    <Script Include="Extract_SparseFeatureVecHeaders.script" />
     <Script Include="Scope.script" />
+    <ScriptCode Include="evaluate.script.cs">
+      <DependentUpon>evaluate.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="Extract_Features_ToStructStream.script.cs">
+      <DependentUpon>Extract_Features_ToStructStream.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="Extract_SparseFeatureVecHeaders.script.cs">
+      <DependentUpon>Extract_SparseFeatureVecHeaders.script</DependentUpon>
+    </ScriptCode>
     <ScriptCode Include="Scope.script.cs">
       <DependentUpon>Scope.script</DependentUpon>
     </ScriptCode>
