@@ -1,0 +1,42 @@
+﻿//Script GUID:57c13dce-2039-4d20-b969-808bcbdfa477
+//Used for tracking history
+
+
+data = SELECT User_Anid AS UserAnid, Contexts AS EntityId, Rating AS Value FROM (SSTREAM @@Input@@);
+
+
+userMapping = 
+    SELECT UserAnid AS UserAnid, RANK AS UserIndex
+    FROM data
+    GROUP BY UserAnid
+;
+userMapping =
+    SELECT UserAnid AS UserAnid,
+           UserIndex - 1 AS UserIndex
+    FROM userMapping;
+
+itemMapping = 
+    SELECT EntityId AS EntityId, RANK AS ItemIndex
+    FROM data
+    GROUP BY EntityId
+;
+
+itemMapping = SELECT EntityId AS EntityId,
+       ItemIndex - 1 AS ItemIndex
+FROM itemMapping;
+
+Data = 
+    SELECT (long) userMapping.UserIndex AS RowId, 
+           (long) itemMapping.ItemIndex AS ColumnId,                        
+           (double) Value AS Value
+    FROM data
+    LEFT OUTER JOIN userMapping 
+    ON data.UserAnid == userMapping.UserAnid
+    LEFT OUTER JOIN itemMapping 
+    ON data.EntityId == itemMapping.EntityId;
+
+
+OUTPUT userMapping TO SSTREAM @@@userMapping@@;
+OUTPUT itemMapping TO SSTREAM @@@itemMapping@@;
+
+OUTPUT Data TO SSTREAM @@mappedTrainMatrixData@@;

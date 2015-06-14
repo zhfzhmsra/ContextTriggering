@@ -1,0 +1,18 @@
+﻿//Script GUID:48dee797-7212-4900-b986-524f122cb86a
+//Used for tracking history
+
+input = SSTREAM @@Input@@;
+
+
+sta = SELECT "PosNum : " + (COUNT()).ToString() AS Info FROM input WHERE Instance.Split('\t')[0] == "1";
+
+sta =
+    SELECT "NegNum : " +(COUNT()) .ToString() AS Info
+    FROM input
+    WHERE Instance.Split('\t')[0] == "0"
+    UNION ALL
+    SELECT *
+    FROM sta;
+
+
+OUTPUT sta TO SSTREAM @@Output@@;

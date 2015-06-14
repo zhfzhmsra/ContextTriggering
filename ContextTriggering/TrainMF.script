@@ -1,0 +1,181 @@
+﻿MODULE @"/users/v-fuz/lib/ScopeML/ScopeMLMatrixCompLib.module"  AS ScopeML;
+
+trainData = SELECT User_Anid AS UserAnid, Contexts AS EntityId, Rating AS Value FROM (SSTREAM @@TrainInput@@);
+testData = SELECT User_Anid AS UserAnid, Contexts AS EntityId FROM (SSTREAM @@TestInput@@);
+
+trainAndTestData =
+    SELECT UserAnid,
+           EntityId
+    FROM trainData
+    UNION ALL
+    SELECT *
+    FROM testData;
+
+trainAndTestData = SELECT DISTINCT UserAnid,
+                EntityId
+FROM trainAndTestData;
+
+//Users =
+//    SELECT UserAnid
+//    FROM trainData
+//    UNION ALL
+//    SELECT UserAnid
+//    FROM testData;
+//
+//Items = 
+//    SELECT EntityId
+//    FROM trainData
+//    UNION ALL
+//    SELECT EntityId
+//    FROM testData;
+
+userMapping = 
+    SELECT UserAnid AS UserAnid, RANK AS UserIndex
+    FROM trainAndTestData
+    GROUP BY UserAnid
+;
+userMapping =
+    SELECT UserAnid AS UserAnid,
+           UserIndex - 1 AS UserIndex
+    FROM userMapping;
+
+itemMapping = 
+    SELECT EntityId AS EntityId, RANK AS ItemIndex
+    FROM trainAndTestData
+    GROUP BY EntityId
+;
+
+itemMapping = SELECT EntityId AS EntityId,
+       ItemIndex - 1 AS ItemIndex
+FROM itemMapping;
+
+trainDataMapping = 
+    SELECT (long) userMapping.UserIndex AS RowId, 
+           (long) itemMapping.ItemIndex AS ColumnId,                        
+           (double) Value AS Value
+    FROM trainData
+    LEFT OUTER JOIN userMapping 
+    ON trainData.UserAnid == userMapping.UserAnid
+    LEFT OUTER JOIN itemMapping 
+    ON trainData.EntityId == itemMapping.EntityId;
+
+//testDataMapping = 
+//    SELECT (long) userMapping.UserIndex AS RowId, 
+//           (long) itemMapping.ItemIndex AS ColumnId                    
+//    FROM testData
+//    LEFT OUTER JOIN userMapping 
+//    ON testData.UserAnid == userMapping.UserAnid
+//    LEFT OUTER JOIN itemMapping 
+//    ON testData.EntityId == itemMapping.EntityId;
+
+trainAndTestData = 
+    SELECT (long) userMapping.UserIndex AS RowId, 
+           (long) itemMapping.ItemIndex AS ColumnId                    
+    FROM trainAndTestData
+    LEFT OUTER JOIN userMapping 
+    ON trainAndTestData.UserAnid == userMapping.UserAnid
+    LEFT OUTER JOIN itemMapping 
+    ON trainAndTestData.EntityId == itemMapping.EntityId;
+
+
+result =
+ScopeML.BlockwiseMFTraining
+(
+    Data = trainDataMapping,
+    K = @@K@@,
+    Iter = @@Iter@@,
+    WithHint = @@WithHint@@,
+    LearningRate = @@LearningRate@@,
+    Regularization = @@Regularization@@,
+    ComputeLoss = @@ComputeLoss@@,
+    ParNum = @@ParNum@@,
+    MFType = @@MFType@@
+);
+
+
+trainPredictResultAll = ScopeML.BlockwiseMFPredict(Data = trainDataMapping, TestData = trainAndTestData, 
+    W = result.W, H = result.H, WB = result.WB, HB = result.HB, MFType = @@MFType@@);
+
+trainPredictResult = SELECT * FROM trainPredictResultAll.Result;
+trainPredictResultAntiMapping =
+    SELECT userMapping.UserAnid AS User_Anid,
+           itemMapping.EntityId AS Contexts,
+           trainPredictResult.Value AS CFValue
+    FROM trainPredictResult
+    LEFT OUTER JOIN userMapping
+    ON trainPredictResult.RowId == userMapping.UserIndex
+    LEFT OUTER JOIN itemMapping
+    ON trainPredictResult.ColumnId == itemMapping.ItemIndex;
+
+OUTPUT trainPredictResultAntiMapping TO @@PredictResult@@;
+
+
+#DECLARE Kstr string = @@K@@.ToString();
+
+userVectors = SELECT * FROM result.W;
+userVectorsAntiMapping =
+    SELECT userMapping.UserAnid AS User_Anid,
+           userVectors.Vector AS Vector
+    FROM userMapping
+    LEFT OUTER JOIN userVectors
+    ON userMapping.UserIndex == userVectors.Index;
+
+userVectorsAntiMapping =
+    PROCESS userVectorsAntiMapping
+    USING VectorNullProcessor(@Kstr);
+
+OUTPUT userVectorsAntiMapping TO SSTREAM @@userVector@@;
+
+itemVectors = SELECT * FROM result.H;
+itemVectorsAntiMapping =
+    SELECT itemMapping.EntityId AS Contexts,
+           itemVectors.Vector AS Vector
+    FROM itemMapping
+    LEFT OUTER JOIN itemVectors
+    ON itemMapping.ItemIndex == itemVectors.Index;
+
+itemVectorsAntiMapping =
+    PROCESS itemVectorsAntiMapping
+    USING VectorNullProcessor(@Kstr);
+
+OUTPUT itemVectorsAntiMapping TO SSTREAM @@itemVector@@;
+
+
+#CS 
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using ScopeRuntime;
+using System.Linq;
+
+
+
+
+public class VectorNullProcessor : Processor
+{
+    public override Schema Produces(string[] requestedColumns, string[] args, Schema inputSchema)
+    {
+        return inputSchema.Clone();
+    }
+
+    public override IEnumerable<Row> Process(RowSet input, Row outputRow, string[] args)
+    {
+        var K = int.Parse(args[0]);
+
+        foreach (Row row in input.Rows)
+        {
+            var vector = row["Vector"].String;
+            if (String.IsNullOrEmpty(vector))
+            {
+                vector = string.Join(",", Enumerable.Range(0, K).Select(dp => "0"));
+            }
+            outputRow[0].Set(row[0].String);
+            outputRow[1].Set(vector);
+            yield return outputRow;
+        }
+    }
+}
+
+#ENDCS

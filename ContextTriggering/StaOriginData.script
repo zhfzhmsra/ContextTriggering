@@ -1,0 +1,7 @@
+﻿
+data = SSTREAM @"/projects/aether/v-zhoche/2e2cd3f4-d3cb-4a62-9171-af7a964a76af@@@FilterChildCards@@@461a6171@@@6-3-2015_01-47-11_PM/Filtered_654641da-0c8a-4919-a52b-67e28516df80.ss";
+
+dataG = SELECT Service, COUNT() AS Count FROM data GROUP BY Service;
+
+OUTPUT dataG
+TO SSTREAM @"/users/v-fuz/temp/tmp1.ss";

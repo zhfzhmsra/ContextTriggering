@@ -1,0 +1,81 @@
+﻿MODULE @"/users/v-fuz/lib/ScopeML/ScopeMLMatrixCompLib.module"  AS ScopeML;
+
+userMapping = SSTREAM @@userMapping@@;
+itemMapping = SSTREAM @@itemMapping@@;
+
+trainData = SSTREAM @@trainInput@@;
+
+trainPredictInput = SELECT RowId, ColumnId FROM (SSTREAM @@trainInput@@);
+testPredictInput = SELECT User_Anid, Contexts FROM (SSTREAM @@testInput@@);
+
+data =
+    SELECT User_Anid AS UserAnid,
+           Contexts AS EntityId
+    FROM testPredictInput;
+
+testPredictInputFilter = 
+    SELECT (long) userMapping.UserIndex AS RowId, 
+           (long) itemMapping.ItemIndex AS ColumnId                       
+    FROM data
+    LEFT OUTER JOIN userMapping 
+    ON data.UserAnid == userMapping.UserAnid
+    LEFT OUTER JOIN itemMapping 
+    ON data.EntityId == itemMapping.EntityId;
+
+testPredictInputFilter =
+    SELECT *
+    FROM testPredictInputFilter
+    WHERE RowId != NULL AND ColumnId != NULL;
+
+
+trainPredictResultAll = ScopeML.BlockwiseMFPredict(Data = trainData, TestData = trainPredictInput, 
+    W = (SSTREAM @@W@@), H = (SSTREAM @@H@@), WB = (SSTREAM @@WB@@), HB = (SSTREAM @@HB@@), MFType = @@MFType@@);
+
+trainPredictResult = SELECT * FROM trainPredictResultAll.Result;
+trainPredictResultAntiMapping =
+    SELECT userMapping.UserAnid AS User_Anid,
+           itemMapping.EntityId AS Contexts,
+           trainPredictResult.Value AS CFValue
+    FROM trainPredictResult
+    LEFT OUTER JOIN userMapping
+    ON trainPredictResult.RowId == userMapping.UserIndex
+    LEFT OUTER JOIN itemMapping
+    ON trainPredictResult.ColumnId == itemMapping.ItemIndex;
+
+OUTPUT trainPredictResultAntiMapping TO @@TrainPredict@@;
+
+
+testPredictResultAll = ScopeML.BlockwiseMFPredict(Data = trainData, TestData = testPredictInputFilter, 
+    W = (SSTREAM @@W@@), H = (SSTREAM @@H@@), WB = (SSTREAM @@WB@@), HB = (SSTREAM @@HB@@), MFType = @@MFType@@);
+
+testPredictResult = SELECT * FROM testPredictResultAll.Result;
+testPredictResultAntiMapping =
+    SELECT userMapping.UserAnid AS User_Anid,
+           itemMapping.EntityId AS Contexts,
+           testPredictResult.Value AS CFValue
+    FROM testPredictResult
+    LEFT OUTER JOIN userMapping
+    ON testPredictResult.RowId == userMapping.UserIndex
+    LEFT OUTER JOIN itemMapping
+    ON testPredictResult.ColumnId == itemMapping.ItemIndex;
+
+
+testRemain = SELECT * FROM testPredictInput 
+    EXCEPT 
+    SELECT User_Anid, Contexts FROM testPredictResultAntiMapping;
+
+testRemain =
+    SELECT User_Anid,
+           Contexts,
+           0 AS CFValue
+    FROM testRemain;
+
+testPredictResultAntiMappingPlus =
+    SELECT *
+    FROM testPredictResultAntiMapping
+    UNION ALL
+    SELECT *
+    FROM testRemain;
+
+OUTPUT testPredictResultAntiMappingPlus TO @@TestPredict@@;
+

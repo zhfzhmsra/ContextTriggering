@@ -1,0 +1,80 @@
+﻿
+
+
+predictRes = EXTRACT User_Anid:string,Contexts:string, Feat_CF:float FROM @@PredictResult@@
+ USING DefaultTextExtractor("-d","\t");
+
+userVector = SSTREAM @@userVector@@;
+itemVector = SSTREAM @@itemVector@@;
+
+
+
+predictResSparse =
+    SELECT User_Anid,
+           Contexts,
+           1 AS Add_FeatureNum,
+           "0:" + Feat_CF.ToString() AS Add_FeatureVector
+    FROM predictRes;
+
+OUTPUT predictResSparse TO SSTREAM @@predictResSparse@@;
+
+
+userVectorSparse =
+    PROCESS userVector
+    USING Processor_FeatureSparse("User_Anid");
+
+OUTPUT userVectorSparse TO SSTREAM @@userVectorSparse@@;
+
+itemVectorSparse =
+    PROCESS itemVector
+    USING Processor_FeatureSparse("Contexts");
+
+OUTPUT itemVectorSparse TO SSTREAM @@itemVectorSparse@@;
+
+
+#CS 
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using ScopeRuntime;
+
+
+
+public class Processor_FeatureSparse : Processor
+{
+   
+    public override Schema Produces(string[] columns, string[] args, Schema input)
+    {
+        Schema s = new Schema();
+        s.Add(new ColumnInfo(args[0], ColumnDataType.String));
+        s.Add(new ColumnInfo("Add_FeatureNum", ColumnDataType.Integer));
+        s.Add(new ColumnInfo("Add_FeatureVector", ColumnDataType.String));
+        return s;
+    }
+    public override IEnumerable<Row> Process(RowSet input, Row output, string[] args)
+    {
+        foreach (var row in input.Rows)
+        {
+            output[args[0]].Set(row[args[0]].String);
+            var strs = row["Vector"].String.Split(',');
+
+            var featureStrs = new List<string>();
+            for (int i = 0; i < strs.Length; i++)
+            {
+                if (float.Parse(strs[i]) != 0)
+                    featureStrs.Add(i.ToString() + ":" + strs[i]);
+            }
+            output["Add_FeatureNum"].Set(strs.Length);
+            output["Add_FeatureVector"].Set(String.Join("\t", featureStrs));
+            yield return output;
+        }
+    }
+}
+
+
+#ENDCS
+
+
+

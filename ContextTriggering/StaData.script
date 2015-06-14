@@ -1,0 +1,17 @@
+﻿
+
+input = SSTREAM @@Input@@;
+
+
+sta = SELECT "PosNum : " + (COUNT()).ToString() AS Info FROM input WHERE Rating == 1;
+
+sta =
+    SELECT "NegNum : " +(COUNT()) .ToString() AS Info
+    FROM input
+    WHERE Rating == 0
+    UNION ALL
+    SELECT *
+    FROM sta;
+
+
+OUTPUT sta TO SSTREAM @@Output@@;
