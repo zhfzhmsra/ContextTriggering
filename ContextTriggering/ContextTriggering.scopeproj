@@ -26,12 +26,40 @@
     <OutputPath>bin\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Script Include="AddSparseFeatures.script" />
+    <Script Include="Balance_PosNeg.script" />
+    <Script Include="Calculate_TimeslotLocationType.script" />
     <Script Include="evaluate.script" />
+    <Script Include="Evaluation.script" />
     <Script Include="Extract_Features_ToStructStream.script" />
     <Script Include="Extract_SparseFeatureVecHeaders.script" />
+    <Script Include="GenerageInstanceStringFormat.script" />
+    <Script Include="GenerateModelInputFormat.script" />
+    <Script Include="GenerateSparseFormat.script" />
+    <Script Include="MFResultSparseFormat.script" />
+    <Script Include="PredictMF.script" />
     <Script Include="Scope.script" />
+    <Script Include="SparseToDenseFormat.script" />
+    <Script Include="StaData.script" />
+    <Script Include="StaInstanceString.script" />
+    <Script Include="StaOriginData.script" />
+    <Script Include="TLC_FastRankTrain.script" />
+    <Script Include="TrainMF.script" />
+    <Script Include="UserContexts_Mapping.script" />
+    <ScriptCode Include="AddSparseFeatures.script.cs">
+      <DependentUpon>AddSparseFeatures.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="Balance_PosNeg.script.cs">
+      <DependentUpon>Balance_PosNeg.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="Calculate_TimeslotLocationType.script.cs">
+      <DependentUpon>Calculate_TimeslotLocationType.script</DependentUpon>
+    </ScriptCode>
     <ScriptCode Include="evaluate.script.cs">
       <DependentUpon>evaluate.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="Evaluation.script.cs">
+      <DependentUpon>Evaluation.script</DependentUpon>
     </ScriptCode>
     <ScriptCode Include="Extract_Features_ToStructStream.script.cs">
       <DependentUpon>Extract_Features_ToStructStream.script</DependentUpon>
@@ -39,8 +67,44 @@
     <ScriptCode Include="Extract_SparseFeatureVecHeaders.script.cs">
       <DependentUpon>Extract_SparseFeatureVecHeaders.script</DependentUpon>
     </ScriptCode>
+    <ScriptCode Include="GenerageInstanceStringFormat.script.cs">
+      <DependentUpon>GenerageInstanceStringFormat.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="GenerateModelInputFormat.script.cs">
+      <DependentUpon>GenerateModelInputFormat.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="GenerateSparseFormat.script.cs">
+      <DependentUpon>GenerateSparseFormat.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="MFResultSparseFormat.script.cs">
+      <DependentUpon>MFResultSparseFormat.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="PredictMF.script.cs">
+      <DependentUpon>PredictMF.script</DependentUpon>
+    </ScriptCode>
     <ScriptCode Include="Scope.script.cs">
       <DependentUpon>Scope.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="SparseToDenseFormat.script.cs">
+      <DependentUpon>SparseToDenseFormat.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="StaData.script.cs">
+      <DependentUpon>StaData.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="StaInstanceString.script.cs">
+      <DependentUpon>StaInstanceString.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="StaOriginData.script.cs">
+      <DependentUpon>StaOriginData.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="TLC_FastRankTrain.script.cs">
+      <DependentUpon>TLC_FastRankTrain.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="TrainMF.script.cs">
+      <DependentUpon>TrainMF.script</DependentUpon>
+    </ScriptCode>
+    <ScriptCode Include="UserContexts_Mapping.script.cs">
+      <DependentUpon>UserContexts_Mapping.script</DependentUpon>
     </ScriptCode>
   </ItemGroup>
   <Import Project="$(AppData)\Microsoft\ScopeStudio\MsBuild\1.0\Scope.targets" />

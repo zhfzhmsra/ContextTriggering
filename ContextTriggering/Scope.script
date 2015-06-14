@@ -1,216 +1,394 @@
-﻿REFERENCE @"Newtonsoft.Json.dll";
-//Script GUID:f027eded-bbad-4000-a0a6-71401cc79fe2
-//Used for tracking history
+﻿REFERENCE @"System.Core.dll";
+MODULE @"\ScopeMLMatrixCompLib.module"  AS ScopeML;
 
-Input = 
-    SSTREAM @@Input@@;
 
-FeatureHeaders =
-    REDUCE Input 
-    PRODUCE *
-    USING FeatureHeaderReducer(@@SparseFeatVecColumns@@,
-                               @@HeaderSuffix@@);
 
-//FeatureHeaders =
-//    REDUCE FeatureHeaders ALL
-//    PRODUCE *
-//    USING IntegrateAllRowsReducer(@@SparseFeatVecColumns@@,
-//                                  @@HeaderSuffix@@);
+/*
+//#DECLARE folder string = @"D:\software\CosmosFastCopy\latest\download\tmp\";
+#DECLARE folder string = @"/my/ContextualTriggering/Data05_26/";
+//#DECLARE folder string = @"/my/Kalmiya/Data01_31/two/";
+#DECLARE outfolder string = @folder;
+    
 
-OUTPUT FeatureHeaders 
-TO SSTREAM @@FeatureHeaders@@;
+//#DECLARE folder string = @"/users/v-fuz/Data/Test/MovieLens/ml-10m/";
+//#DECLARE outfolder string = @"/users/v-fuz/Data/Test/MovieLens/ml-10m/";  
+
+
+#DECLARE trainInput string = @folder+"SparseMatrix.tsv";
+#DECLARE testInput string = @folder+"TestMatrix.tsv";
+#DECLARE predictTestOutput string = @folder+"testOutput.tsv";
+#DECLARE predictTrainOutput string = @folder+"trainOutput.tsv";
+
+//#DECLARE trainInput string = @folder+"mf_input.ss";
+//#DECLARE testInput string = @folder+"movieLens_10M_testing.ss";
+
+#DECLARE K int = 100;
+#DECLARE Iter  int = 10;
+#DECLARE MFType  string = "BasicMF"; //BasicMF,BiasMF,BPRMF
+#DECLARE ParNum  int = 10;
+#DECLARE Regularization  double = 0.05;
+#DECLARE LearningRate  double = 0.1;
+#DECLARE LearningRateShrinkage double = 1.0;
+#DECLARE ComputeLoss  bool = true;
+
+#DECLARE KStr string = @K.ToString();
+#DECLARE IterStr string = @Iter.ToString();
+#DECLARE ParNumStr  string = @ParNum.ToString();
+#DECLARE RegularizationStr  string = @Regularization.ToString();
+#DECLARE LearningRateStr  string = @LearningRate.ToString();
+#DECLARE LearningRateShrinkageStr string = @LearningRateShrinkage.ToString();
+#DECLARE ComputeLossStr  string = @ComputeLoss.ToString();
+
+#DECLARE RowVector string = @outfolder + "Row" + @"_mftype_" + @MFType + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".ss";
+#DECLARE ColVector string = @outfolder + "Col" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".ss";
+#DECLARE LossFile string = @outfolder + "Loss" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".ss";
+#DECLARE TestLossFile string = @outfolder + "TestLoss" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".ss";
+#DECLARE RowVectorFlat string = @outfolder + "Row" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".txt";
+#DECLARE ColVectorFlat string = @outfolder + "Col" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".txt";
+#DECLARE RowBiasFlat string = @outfolder + "RowBias" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".txt";
+#DECLARE ColBiasFlat string = @outfolder + "ColBias" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".txt";
+#DECLARE LossFileFlat string = @outfolder + "Loss" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".txt";
+#DECLARE TestLossFileFlat string = @outfolder + "TestLoss" + @"_mftype_" + @MFType  + @"_lambda_" + @Regularization.ToString() + @"_eta_" + @LearningRate.ToString() + @"_k_" + @K.ToString() + @"_iter_" + @Iter.ToString() + @".txt";
+#DECLARE performanceOutput string = @outfolder + "performanceOutput.ss";
+#DECLARE performanceOutputFlat string = @outfolder + "performanceOutput.txt";
+
+//data = SSTREAM @trainInput;
+//testData = SSTREAM @testInput;
+
+data = EXTRACT RowId:long,ColumnId:long,Value:double 
+    FROM @trainInput USING DefaultTextExtractor("-d","\t");
+
+//data = SELECT RowId, ColumnId, 1.0 AS Value FROM data;
+
+//testData = EXTRACT RowId:long,ColumnId:long//,Value:double 
+  //  FROM @testInput USING DefaultTextExtractor("-d","\t");
+
+//testData = SELECT RowId, ColumnId FROM testData;
+
+//
+//data = SELECT UserId AS UserAnid, EntityId AS EntityId, Value AS Value FROM data;
+//testData = SELECT UserId AS UserAnid, EntityId AS EntityId, Value AS Value FROM testData;
+//
+//userMapping = 
+//    SELECT UserAnid AS UserAnid, RANK AS UserIndex
+//    FROM data
+//    GROUP BY UserAnid
+//;
+//userMapping =
+//    SELECT UserAnid AS UserAnid,
+//           UserIndex - 1 AS UserIndex
+//    FROM userMapping;
+//
+//itemMapping = 
+//    SELECT EntityId AS EntityId, RANK AS ItemIndex
+//    FROM data
+//    GROUP BY EntityId
+//;
+//
+//itemMapping = SELECT EntityId AS EntityId,
+//       ItemIndex - 1 AS ItemIndex
+//FROM itemMapping;
+//
+//data = 
+//    SELECT (long) userMapping.UserIndex AS RowId, 
+//           (long) itemMapping.ItemIndex AS ColumnId,                        
+//           (double) Value AS Value
+//    FROM data
+//    LEFT OUTER JOIN userMapping 
+//    ON data.UserAnid == userMapping.UserAnid
+//    LEFT OUTER JOIN itemMapping 
+//    ON data.EntityId == itemMapping.EntityId;
+//
+//testData = 
+//    SELECT (long) userMapping.UserIndex AS RowId, 
+//           EntityId AS EntityId,                        
+//           Value AS Value
+//    FROM testData
+//    INNER JOIN userMapping 
+//    ON testData.UserAnid == userMapping.UserAnid
+//    ;
+//
+//testData = 
+//    SELECT RowId AS RowId, 
+//           (long) itemMapping.ItemIndex AS ColumnId,                        
+//           (double) Value AS Value
+//    FROM testData    
+//    INNER JOIN itemMapping 
+//    ON testData.EntityId == itemMapping.EntityId;
+
+
+T = SELECT MAX(RowId) AS maxRow FROM data;
+
+performanceInfo =
+    SELECT "Total Elements Count:" + (COUNT()).ToString() AS Info, 1 AS Key
+    FROM data;
+
+tmp = SELECT "Row Count:" + (COUNT(DISTINCT RowId)).ToString() AS Info, 1 AS Key FROM data;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+tmp = SELECT "Column Count:" + (COUNT(DISTINCT ColumnId)).ToString() AS Info, 1 AS Key  FROM data;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+tmp = SELECT ("NumFactors:" + @K.ToString()) AS Info, 1 AS Key FROM T;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+tmp = SELECT "Iter:" + @Iter.ToString() AS Info, 1 AS Key FROM T;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+tmp = SELECT "MFType:" + @MFType.ToString() AS Info, 1 AS Key FROM T;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+tmp = SELECT "GroupCount:" + @ParNum.ToString() AS Info, 1 AS Key FROM T;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+#DECLARE startTime  DateTime = DateTime.Now;
+tmp = SELECT "startTime:" + @startTime.ToString() AS Info, 1 AS Key FROM T;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+
+
+//result = ScopeML.NMFTraining(Data = data, TestData = testData, K = @K, Iter = @Iter, ParNum = @ParNum, ComputeLoss = @ComputeLoss);
+
+result = ScopeML.BlockwiseMFTraining(Data = data, K = @K
+    , Iter = @Iter, MFType = @MFType, ParNum = @ParNum, LearningRate = @LearningRate, Regularization = @Regularization
+    , LearningRateShrinkage = @LearningRateShrinkage, ComputeLoss = @ComputeLoss);
+
+
+//predict = ScopeML.BlockwiseMFPredict(Data = data, TestData = testData, W = result.W, H = result.H, WB = result.WB, HB = result.HB, MFType = @MFType);
+
+//OUTPUT predict.Result TO @predictTestOutput;
+
+//traind=SELECT RowId,ColumnId FROM data;
+//predict = ScopeML.BlockwiseMFPredict(Data = data, TestData = traind, W = result.W, H = result.H, WB = result.WB, HB = result.HB, MFType = @MFType);
+
+Tend =
+    SELECT MAX(Index) AS MaxRow
+    FROM result.W;
+
+tmp = SELECT "endTime:" + DateTime.Now.ToString() AS Info, 1 AS Key FROM Tend;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+tmp = SELECT "runningTime:" + ((DateTime.Now - @startTime).TotalMinutes / 60.0).ToString("0.00") AS Info, 1 AS Key FROM Tend;
+performanceInfo =
+    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+    tmp ON performanceInfo.Key == tmp.Key;
+
+
+//Test
+
+//testData=
+//SELECT RowId,ColumnId FROM data;
+//Wresult=
+//SSTREAM @RowVector;
+//Hresult=
+//SSTREAM @ColVector;
+//WBresult=
+//EXTRACT Index:long, Bias:double
+//FROM @RowBiasFlat
+//USING DefaultTextExtractor("-d","\t");
+//HBresult=
+//EXTRACT Index:long, Bias:double
+//FROM @ColBiasFlat
+//USING DefaultTextExtractor("-d","\t");
+//predict = ScopeML.BlockwiseMFPredict(Data = data, TestData = testData, W = Wresult, H = Hresult, WB = WBresult, HB = HBresult, MFType = @MFType);
+//OUTPUT predict.Result TO @predictTestOutput;
+
+//testData = SELECT UserId AS UserAnid, EntityId AS EntityId, Value AS Value FROM testData;
+//
+//testData = SELECT testData.UserAnid, testData.EntityId, testData.Value, userVector.Vector AS uVector
+//, itemVector.Vector AS iVector FROM testData
+//    LEFT OUTER JOIN userVector ON testData.UserAnid == userVector.UserAnid
+//    LEFT OUTER JOIN itemVector ON testData.EntityId == itemVector.EntityId;
+//
+//
+//rmse =
+//    PROCESS testData
+//    USING RMSEDotProcessor();
+//
+//rmseCount =
+//    SELECT COUNT() AS Num,
+//           1 AS Join
+//    FROM rmse;
+//
+//rmseSum =
+//    SELECT SUM(Square) AS Sum,
+//            1 AS Join
+//    FROM rmse;
+//tmp =
+//    SELECT ("rmse:" + Math.Sqrt(rmseSum.Sum / rmseCount.Num).ToString("0.000")) AS Info, 1 AS Key
+//    FROM rmseSum
+//    INNER JOIN rmseCount
+//    ON rmseSum.Join == rmseCount.Join;
+//
+//performanceInfo =
+//    SELECT performanceInfo.Info + "\t" + tmp.Info AS Info, 1 AS Key FROM performanceInfo LEFT OUTER JOIN 
+//    tmp ON performanceInfo.Key == tmp.Key;
+
+
+
+performanceInfo = SELECT DateTime.Now AS Time, Info AS Info FROM performanceInfo;
+
+#IF (EXISTS(@performanceOutput))
+    tmp = SSTREAM @performanceOutput;
+    performanceInfo = SELECT * FROM tmp UNION ALL SELECT * FROM performanceInfo;
+#ENDIF
+
+OUTPUT result.W
+TO @RowVectorFlat;
+
+OUTPUT result.H
+TO @ColVectorFlat; 
+
+OUTPUT result.WB TO @RowBiasFlat;
+OUTPUT result.HB TO @ColBiasFlat;
+
+OUTPUT result.W
+TO SSTREAM @RowVector;
+
+OUTPUT result.H
+TO SSTREAM @ColVector; 
+
+OUTPUT result.Loss TO @LossFileFlat;
+OUTPUT result.Loss TO SSTREAM @LossFile;
+
+OUTPUT performanceInfo TO SSTREAM @performanceOutput;
+OUTPUT performanceInfo TO @performanceOutputFlat;
+
+//OUTPUT result.testLoss TO SSTREAM @TestLossFile;
+//OUTPUT result.testLoss TO @TestLossFileFlat;
+
+//OUTPUT predict.Result TO @predictTrainOutput;
+*/
+data = EXTRACT RowId:long,ColumnId:long,Value:double 
+    FROM @@trainInput@@ USING DefaultTextExtractor("-d","\t");
+
+#DECLARE K int = 100;
+#DECLARE Iter  int = 10;
+#DECLARE MFType  string = "BPRMF"; //BasicMF,BiasMF,BPRMF
+#DECLARE ParNum  int = 10;
+#DECLARE Regularization  double = 0.05;
+#DECLARE LearningRate  double = 0.1;
+#DECLARE LearningRateShrinkage double = 1.0;
+#DECLARE ComputeLoss  bool = true;
+
+result = ScopeML.BlockwiseMFTraining(Data = data, K = @K
+    , Iter = @Iter, MFType = @MFType, ParNum = @ParNum, LearningRate = @LearningRate, Regularization = @Regularization
+    , LearningRateShrinkage = @LearningRateShrinkage, ComputeLoss = @ComputeLoss);
+
+OUTPUT result.W
+TO @@RowVectorFlat@@;
+
+OUTPUT result.H
+TO @@ColVectorFlat@@; 
+
+OUTPUT result.WB TO @@RowBiasFlat@@;
+OUTPUT result.HB TO @@ColBiasFlat@@;
+
+OUTPUT result.W
+TO SSTREAM @@RowVector@@;
+
+OUTPUT result.H
+TO SSTREAM @@ColVector@@; 
+
+OUTPUT result.Loss TO @@LossFileFlat@@;
+OUTPUT result.Loss TO SSTREAM @@LossFile@@;
 #CS
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Collections.Generic;
 using ScopeRuntime;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Web;
 
 
-/// <summary>
-/// For each column of sparse feature group <k,v> pairs, output a corresponding column of the feature names.
-/// </summary>
-public class FeatureHeaderReducer : Reducer
+public static class Util
 {
-    public const string SparseFeatVecColumnsKey = "sfv_cols";
-    public const string HeaderSuffixKey = "header_suffix";
-
-    public Dictionary<string, string> GetArgs(string[] args)
+    public static double VectorDot(string userVector, string itemVector)
     {
-        var argDict = new Dictionary<string, string>();
-        foreach (var arg in args)
+        try
         {
-            string[] kv = arg.Split(':');
-            if (kv.Length == 2)
+            Random r = new Random();
+
+            if (userVector == null || itemVector == null || userVector.Length < 1
+                || itemVector.Length < 1)
             {
-                argDict[kv[0]] = kv[1];
+                return r.NextDouble() / Math.Pow(10, 7);
+                //return 0.0;
             }
+            var uv = userVector.Split(',');
+            var iv = itemVector.Split(',');
+            var res = 0.0;
+            for (int i = 0; i < uv.Length - 1; i++)
+                res += double.Parse(uv[i]) * double.Parse(iv[i]);
+            return res;
         }
-
-        if (!argDict.ContainsKey(HeaderSuffixKey))
-        {
-            argDict[HeaderSuffixKey] = "Headers";
-        }
-        
-        return argDict;
-    }
-
-    /// <summary>
-    /// The name of each output column corresponds to the name of a sparse feature group input column, appended by the header suffix.
-    /// </summary>
-    /// <param name="columns">Defalut input, unused.</param> 
-    /// <param name="args">Arguments to specify sparse feature columns and the header suffix.</param>
-    /// <param name="input">Input schema, unused.</param>
-    /// <returns></returns>
-    public override Schema Produces(string[] columns, string[] args, Schema input)
-    {
-        Schema output = new Schema();
-        var argDict = GetArgs(args);        
-        if (argDict.ContainsKey(SparseFeatVecColumnsKey))
-        {
-            string[] sparseFeatVecColumns = argDict[SparseFeatVecColumnsKey].Split(',');
-            output = new Schema(string.Join(",", sparseFeatVecColumns.Select(col => col + argDict[HeaderSuffixKey])));
-        }
-        return output;
-    }
-
-    /// <summary>
-    /// Reduces the input to output one row that contains multiple columns, each of which contains the features names
-    /// of one input sparse feature group column.
-    /// </summary>
-    /// <param name="input">Rows that contain columns of sparse feature groups in <k,v> pairs.</param>
-    /// <param name="output">One row that contains multiple columns, each of which contains the features names
-    /// of one input sparse feature group column.</param>
-    /// <param name="args">Arguments to specify sparse feature columns and the header suffix.</param>
-    /// <returns></returns>
-    public override IEnumerable<Row> Reduce(RowSet input, Row output, string[] args)
-    {
-        var argDict = GetArgs(args);
-        if (argDict.ContainsKey(SparseFeatVecColumnsKey))
-        {
-            string[] sparseFeatVecColumns = argDict[SparseFeatVecColumnsKey].Split(',');
-            var headers = new Dictionary<string, HashSet<string>>();
-
-            foreach (Row row in input.Rows)
-            {
-                foreach (var col in sparseFeatVecColumns)
-                {
-                    if (!headers.ContainsKey(col))
-                    {
-                        headers[col] = new HashSet<string>();
-                    }
-                    var sparseFeatures = row[col].String;
-                    if (!string.IsNullOrEmpty(sparseFeatures))
-                    {
-                        foreach (var featName in sparseFeatures.Split(' ').Select(kv => kv.Split(':')[0]))
-                        {
-                            if (!string.IsNullOrEmpty(featName) && !headers[col].Contains(featName))
-                            {
-                                headers[col].Add(featName);
-                            }
-                        }
-                    }
-                }
-            }
-
-            foreach (var col in sparseFeatVecColumns)
-            {
-                var headerList = headers[col].ToList();
-                headerList.Sort();
-                var s = string.Join(",", headerList);
-                if (string.IsNullOrEmpty(s))
-                {
-                    s = "N/A";
-                }
-                output[col + argDict[HeaderSuffixKey]].Set(s);
-            }            
-            yield return output; 
-        }
-        
-    }
+        catch (Exception) { }
+        return 0.0;
+    }   
 }
 
-//
-//public class IntegrateAllRowsReducer : Reducer
-//{
-//    public const string SparseFeatVecColumnsKey = "sfv_cols";
-//    public const string HeaderSuffixKey = "header_suffix";
-//
-//    public Dictionary<string, string> GetArgs(string[] args)
-//    {
-//        var argDict = new Dictionary<string, string>();
-//        foreach (var arg in args)
-//        {
-//            string[] kv = arg.Split(':');
-//            if (kv.Length == 2)
-//            {
-//                argDict[kv[0]] = kv[1];
-//            }
-//        }
-//
-//        if (!argDict.ContainsKey(HeaderSuffixKey))
-//        {
-//            argDict[HeaderSuffixKey] = "Headers";
-//        }
-//        
-//        return argDict;
-//    }
-//    public override Schema Produces(string[] columns, string[] args, Schema input_schema)
-//    {
-//        return input_schema.Clone();
-//    }
-//
-//    public override IEnumerable<Row> Reduce(RowSet input, Row output, string[] args)
-//    {
-//        var argDict = GetArgs(args);
-//        if (argDict.ContainsKey(SparseFeatVecColumnsKey))
-//        {
-//            string[] sparseFeatVecColumns = argDict[SparseFeatVecColumnsKey]
-//                .Split(',').Select(dp => dp + argDict[HeaderSuffixKey]);
-//            var headers = new Dictionary<string, HashSet<string>>();
-//
-//            foreach (Row row in input.Rows)
-//            {
-//                foreach (var col in sparseFeatVecColumns)
-//                {
-//                    if (!headers.ContainsKey(col))
-//                    {
-//                        headers[col] = new HashSet<string>();
-//                    }
-//                    var names = row[col].String;
-//                    if (!string.IsNullOrEmpty(sparseFeatures))
-//                    {
-//                        foreach (var featName in names.Split(','))
-//                        {
-//                            if (!string.IsNullOrEmpty(featName) && !headers[col].Contains(featName))
-//                            {
-//                                headers[col].Add(featName);
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//
-//            foreach (var col in sparseFeatVecColumns)
-//            {
-//                var headerList = headers[col].ToList();
-//                headerList.Sort();
-//                var s = string.Join(",", headerList);
-//                if (string.IsNullOrEmpty(s))
-//                {
-//                    s = "N/A";
-//                }
-//                output[col].Set(s);
-//            }            
-//            yield return output; 
-//        }    
-//    }
-//}
 
+public class RMSEDotProcessor : Processor
+{
+    public override Schema Produces(string[] columns, string[] args, Schema input)
+    {
+        Schema s = new Schema();
+        s.Add(new ColumnInfo("UserAnid", ColumnDataType.String));
+        s.Add(new ColumnInfo("EntityId", ColumnDataType.String));
+        s.Add(new ColumnInfo("Label", ColumnDataType.Double));
+        s.Add(new ColumnInfo("Predict", ColumnDataType.Double));
+        s.Add(new ColumnInfo("Square", ColumnDataType.Double));
+        return s;
+    }
 
+    public override IEnumerable<Row> Process(RowSet input, Row output, string[] args)
+    {
+        foreach (var row in input.Rows)
+        {
+            if (row["uVector"].IsNull() || row["iVector"].IsNull())
+                continue;
+
+            var predict = 0.0;
+            var label = row["Value"].Double;
+            try
+            {
+                var uv = row["uVector"].String.Split(',');
+                var iv = row["iVector"].String.Split(',');
+                for (int i = 0; i < uv.Length - 1; i++)
+                    predict += double.Parse(uv[i]) * double.Parse(iv[i]);
+                if (predict < 1)
+                    predict = 1;
+                if (predict > 5)
+                    predict = 5;
+            }
+            catch (Exception e)
+            {
+                continue;
+            }
+            output["UserAnid"].Set(row["UserAnid"].String);
+            output["EntityId"].Set(row["EntityId"].String);
+            output["Label"].Set(label);
+            output["Predict"].Set(predict);
+            output["Square"].Set(Math.Pow(label - predict, 2));
+            yield return output;
+        }
+    }
+}
 #ENDCS
 
-// Generated by ScopeStudio, version 1.7.8000.0!
+// Generated by ScopeStudio, version 1.8.0000.3!
